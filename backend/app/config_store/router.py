@@ -20,7 +20,9 @@ async def get_all_config(
 ):
     entries = await list_entries(db, namespace)
     for entry in entries:
-        entry.value = mask_entry_value(entry)
+        masked = mask_entry_value(entry)
+        db.expunge(entry)
+        entry.value = masked
     return entries
 
 
@@ -34,7 +36,9 @@ async def get_config_entry(
     entry = await get_entry(db, namespace, key)
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Config entry not found")
-    entry.value = mask_entry_value(entry)
+    masked = mask_entry_value(entry)
+    db.expunge(entry)
+    entry.value = masked
     return entry
 
 
@@ -54,7 +58,10 @@ async def update_config_entry(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only SUPER_ADMIN can modify secrets")
 
     updated = await upsert_entry(db, namespace, key, body.value, updated_by=current_user.id)
-    updated.value = mask_entry_value(updated)
+    await db.commit()
+    masked = mask_entry_value(updated)
+    db.expunge(updated)
+    updated.value = masked
     return updated
 
 

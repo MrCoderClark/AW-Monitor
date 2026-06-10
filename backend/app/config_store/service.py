@@ -1,11 +1,15 @@
+import logging
 import uuid
 from typing import Any
 
+from cryptography.fernet import InvalidToken
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config_store.encryption import decrypt_value, encrypt_value
 from app.config_store.models import ConfigEntry
+
+logger = logging.getLogger(__name__)
 
 _cache: dict[str, Any] = {}
 MASKED = "••••••••"
@@ -21,7 +25,11 @@ async def load_cache(db: AsyncSession) -> None:
     for entry in entries:
         ck = _cache_key(entry.namespace, entry.key)
         if entry.is_sensitive and entry.value:
-            _cache[ck] = decrypt_value(entry.value)
+            try:
+                _cache[ck] = decrypt_value(entry.value)
+            except InvalidToken:
+                logger.warning("Config %s.%s has a corrupted value — skipping, re-set via UI", entry.namespace, entry.key)
+                _cache[ck] = None
         else:
             _cache[ck] = entry.value
 
