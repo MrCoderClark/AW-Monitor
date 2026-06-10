@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.audit.router import router as audit_router
 from app.auth.router import router as auth_router
 from app.core.middleware import setup_middleware
 from app.users.router import router as users_router
@@ -17,6 +18,7 @@ def create_app() -> FastAPI:
     setup_middleware(app)
     app.include_router(auth_router)
     app.include_router(users_router)
+    app.include_router(audit_router)
 
     @app.get("/health")
     async def health_check():
