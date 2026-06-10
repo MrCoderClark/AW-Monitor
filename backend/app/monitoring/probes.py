@@ -23,20 +23,22 @@ async def probe_ping(ip: str, timeout_ms: int = 2000) -> ProbeResult:
             timeout_s = max(1, timeout_ms // 1000)
             cmd = ["ping", "-c", "1", "-W", str(timeout_s), ip]
 
-        process = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        import subprocess
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: subprocess.run(cmd, capture_output=True, timeout=timeout_ms / 1000 + 2),
         )
-        stdout, _ = await asyncio.wait_for(process.communicate(), timeout=timeout_ms / 1000 + 2)
         elapsed = (time.monotonic() - start) * 1000
 
-        if process.returncode == 0:
+        if result.returncode == 0:
             ping_ms = elapsed
-            match = re.search(r"time[=<](\d+\.?\d*)", stdout.decode("utf-8", errors="replace"))
+            stdout = result.stdout.decode("utf-8", errors="replace")
+            match = re.search(r"time[=<](\d+\.?\d*)", stdout)
             if match:
                 ping_ms = float(match.group(1))
             return ProbeResult(success=True, duration_ms=ping_ms, detail="Ping OK", data={"ping_ms": ping_ms})
         return ProbeResult(success=False, duration_ms=elapsed, detail="No response")
-    except (asyncio.TimeoutError, OSError) as e:
+    except (asyncio.TimeoutError, OSError, subprocess.TimeoutExpired) as e:
         elapsed = (time.monotonic() - start) * 1000
         return ProbeResult(success=False, duration_ms=elapsed, detail=str(e))
 
@@ -63,7 +65,8 @@ async def probe_smb_auth(ip: str, username: str, password: str, domain: str = ""
         conn = Connection(uuid.uuid4(), ip, 445)
         await asyncio.get_event_loop().run_in_executor(None, conn.connect)
 
-        session = SMBSession(conn, username, password, domain=domain if domain else None)
+        auth_user = f"{domain}\\{username}" if domain else username
+        session = SMBSession(conn, auth_user, password)
         await asyncio.get_event_loop().run_in_executor(None, session.connect)
 
         elapsed = (time.monotonic() - start) * 1000
