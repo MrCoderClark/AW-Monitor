@@ -1,5 +1,7 @@
 import pytest
 import pytest_asyncio
+from sqlalchemy import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base
@@ -11,20 +13,27 @@ from app.auth.service import authenticate_user, create_session, refresh_session,
 @pytest_asyncio.fixture
 async def db_session():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    # SQLite doesn't support schemas — temporarily remove for test table creation
     original_schema = Base.metadata.schema
     Base.metadata.schema = None
+    original_types = {}
     for table in Base.metadata.tables.values():
         table.schema = None
+        for col in table.columns:
+            if isinstance(col.type, JSONB):
+                original_types[(table.key, col.key)] = col.type
+                col.type = JSON()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as session:
         yield session
-    # Restore schema
     Base.metadata.schema = original_schema
     for table in Base.metadata.tables.values():
         table.schema = original_schema
+        for col in table.columns:
+            key = (table.key, col.key)
+            if key in original_types:
+                col.type = original_types[key]
     await engine.dispose()
 
 

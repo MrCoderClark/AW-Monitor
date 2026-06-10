@@ -1,0 +1,81 @@
+import uuid
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.models import User
+from app.config_store.service import get_cached
+from app.core.database import get_db
+from app.dependencies import require_role
+from app.ingestion.schemas import BackupRunCreate, BackupRunRead, BackupRunStats, ScanSnapshotRead
+from app.ingestion.service import (
+    create_backup_run,
+    get_backup_run,
+    get_backup_stats,
+    get_latest_scan_snapshot,
+    list_backup_runs,
+    list_scan_snapshots,
+)
+
+router = APIRouter(tags=["ingestion"])
+
+
+@router.get("/api/backup-runs", response_model=list[BackupRunRead])
+async def get_backup_runs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("USER")),
+):
+    runs, _ = await list_backup_runs(db, skip, limit)
+    return runs
+
+
+@router.get("/api/backup-runs/stats", response_model=BackupRunStats)
+async def get_runs_stats(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("USER")),
+):
+    return await get_backup_stats(db)
+
+
+@router.get("/api/backup-runs/{run_id}", response_model=BackupRunRead)
+async def get_run(
+    run_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("USER")),
+):
+    run = await get_backup_run(db, str(run_id))
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backup run not found")
+    return run
+
+
+@router.get("/api/scans/latest", response_model=ScanSnapshotRead | None)
+async def latest_scan(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("USER")),
+):
+    return await get_latest_scan_snapshot(db)
+
+
+@router.get("/api/scans/history", response_model=list[ScanSnapshotRead])
+async def scan_history(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("USER")),
+):
+    return await list_scan_snapshots(db, skip, limit)
+
+
+@router.post("/api/webhooks/backup-run", response_model=BackupRunRead, status_code=status.HTTP_201_CREATED)
+async def receive_backup_webhook(
+    body: BackupRunCreate,
+    x_webhook_secret: str = Header(...),
+    db: AsyncSession = Depends(get_db),
+):
+    expected = get_cached("webhook", "secret")
+    if not expected or x_webhook_secret != expected:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid webhook secret")
+    return await create_backup_run(db, body)
