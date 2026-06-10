@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.auth.router import router as auth_router
 from app.core.middleware import setup_middleware
+from app.users.router import router as users_router
 
 
 @asynccontextmanager
@@ -15,6 +16,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="AW Monitor", version="0.1.0", lifespan=lifespan)
     setup_middleware(app)
     app.include_router(auth_router)
+    app.include_router(users_router)
 
     @app.get("/health")
     async def health_check():
