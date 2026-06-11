@@ -2,11 +2,67 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { MoreHorizontal, Eye, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { DataTable, type Column } from "@/components/data-table";
 import { TrendSparkline } from "@/components/trend-sparkline";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatRelativeTime } from "@/lib/utils";
 import type { BackupFile, FileListResponse, FolderDate, ScanSnapshot } from "@/lib/types";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const PAGE_SIZE = 50;
+
+function FileActions({ file }: { file: BackupFile }) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const downloadUrl = `${API_BASE}/api/files/${file.id}/download`;
+
+  const handleView = () => {
+    window.open(downloadUrl + `?token=${token}`, "_blank");
+  };
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(downloadUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail — could show a toast
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="inline-flex items-center justify-center size-6 rounded text-neutral-500 hover:text-white hover:bg-surface-2 transition-colors">
+        <MoreHorizontal className="size-3.5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="bottom">
+        <DropdownMenuItem onClick={handleView}>
+          <Eye className="size-3.5 mr-2" />
+          View PDF
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleDownload}>
+          <Download className="size-3.5 mr-2" />
+          Download
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 const fileColumns: Column<BackupFile>[] = [
   {
@@ -58,6 +114,12 @@ const fileColumns: Column<BackupFile>[] = [
       </span>
     ),
   },
+  {
+    key: "actions",
+    header: "",
+    className: "w-10",
+    render: (f) => <FileActions file={f} />,
+  },
 ];
 
 const scanHistoryColumns: Column<ScanSnapshot>[] = [
@@ -98,6 +160,7 @@ const scanHistoryColumns: Column<ScanSnapshot>[] = [
 
 export default function ScansPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const { data: latest } = useQuery({
     queryKey: ["scans-latest"],
@@ -117,14 +180,26 @@ export default function ScansPage() {
     refetchInterval: 60_000,
   });
 
+  const skip = page * PAGE_SIZE;
   const { data: fileData, isLoading: filesLoading } = useQuery({
-    queryKey: ["files", selectedDate],
+    queryKey: ["files", selectedDate, page],
     queryFn: () => {
-      const params = selectedDate ? `?folder_date=${selectedDate}&limit=200` : "?limit=200";
-      return apiFetch<FileListResponse>(`/api/files${params}`);
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        skip: String(skip),
+      });
+      if (selectedDate) params.set("folder_date", selectedDate);
+      return apiFetch<FileListResponse>(`/api/files?${params}`);
     },
     refetchInterval: 30_000,
   });
+
+  const totalPages = fileData ? Math.ceil(fileData.total / PAGE_SIZE) : 0;
+
+  const handleDateChange = (value: string) => {
+    setSelectedDate(value || null);
+    setPage(0);
+  };
 
   const trendData = [...history]
     .reverse()
@@ -189,7 +264,7 @@ export default function ScansPage() {
           <div className="flex items-center gap-2">
             <select
               value={selectedDate || ""}
-              onChange={(e) => setSelectedDate(e.target.value || null)}
+              onChange={(e) => handleDateChange(e.target.value)}
               className="bg-surface-2 border border-border-subtle rounded px-2 py-1 text-xs text-neutral-300 focus:outline-none focus:ring-1 focus:ring-aw-accent"
             >
               <option value="">All dates</option>
@@ -210,6 +285,37 @@ export default function ScansPage() {
             keyFn={(f) => f.id}
             emptyMessage="No files found. Configure express_api.base_url to connect."
           />
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-border-subtle">
+            <span className="text-xs text-neutral-500">
+              Page {page + 1} of {totalPages}
+              <span className="ml-2 text-neutral-600">
+                ({skip + 1}–{Math.min(skip + PAGE_SIZE, fileData?.total || 0)} of {fileData?.total.toLocaleString()})
+              </span>
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="text-neutral-400 disabled:text-neutral-700"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="text-neutral-400 disabled:text-neutral-700"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 

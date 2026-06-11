@@ -49,3 +49,14 @@ class ScanSnapshotRead(BaseModel):
     captured_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class DashboardStats(BaseModel):
+    total_runs: int
+    success_rate: float
+    avg_duration_seconds: float
+    last_run: BackupRunRead | None
+    total_files: int
+    new_files: int
+    storage_total: str | None
+    last_scan_at: datetime | None

@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config_store.service import get_cached, get_cached_int
@@ -117,3 +117,51 @@ async def get_pc_health_history(
         .limit(limit)
     )
     return result.scalars().all()
+
+
+async def get_pc_detail_stats(db: AsyncSession, pc: PC) -> dict:
+    from app.ingestion.models import BackupRun
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    total_24h = await db.execute(
+        select(func.count(HealthCheck.id))
+        .where(HealthCheck.pc_id == pc.id, HealthCheck.checked_at >= cutoff)
+    )
+    checks_24h = total_24h.scalar_one()
+
+    online_24h = await db.execute(
+        select(func.count(HealthCheck.id))
+        .where(HealthCheck.pc_id == pc.id, HealthCheck.checked_at >= cutoff, HealthCheck.status == "ONLINE")
+    )
+    online_count = online_24h.scalar_one()
+
+    uptime_pct = (online_count / checks_24h * 100) if checks_24h > 0 else 0.0
+
+    latest_result = await db.execute(
+        select(HealthCheck)
+        .where(HealthCheck.pc_id == pc.id)
+        .order_by(HealthCheck.checked_at.desc())
+        .limit(1)
+    )
+    latest_check = latest_result.scalar_one_or_none()
+
+    # Find recent backup runs where this PC failed
+    recent_runs = await db.execute(
+        select(BackupRun)
+        .where(BackupRun.pcs_failed.isnot(None))
+        .order_by(BackupRun.received_at.desc())
+        .limit(20)
+    )
+    failure_dates = []
+    for run in recent_runs.scalars().all():
+        if run.pcs_failed and pc.name in run.pcs_failed:
+            failure_dates.append(run.received_at.isoformat())
+
+    return {
+        "latest_check": latest_check,
+        "uptime_pct": round(uptime_pct, 1),
+        "checks_24h": checks_24h,
+        "online_24h": online_count,
+        "recent_backup_failures": failure_dates[:5],
+    }

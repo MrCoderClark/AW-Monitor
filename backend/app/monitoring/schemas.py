@@ -53,3 +53,12 @@ class PCHealthSnapshot(BaseModel):
     tier_reached: int
     failure_reason: str | None
     checked_at: datetime | None
+
+
+class PCDetailStats(BaseModel):
+    pc: PCRead
+    latest_check: HealthCheckRead | None
+    uptime_pct: float
+    checks_24h: int
+    online_24h: int
+    recent_backup_failures: list[str]

@@ -2,7 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ingestion.models import BackupRun, ScanSnapshot
-from app.ingestion.schemas import BackupRunCreate, BackupRunStats
+from app.ingestion.schemas import BackupRunCreate, BackupRunStats, DashboardStats
 
 
 def derive_backup_status(files_copied: int, pcs_failed: list[str] | None) -> str:
@@ -103,3 +103,19 @@ async def list_scan_snapshots(db: AsyncSession, skip: int = 0, limit: int = 50) 
         select(ScanSnapshot).order_by(ScanSnapshot.captured_at.desc()).offset(skip).limit(limit)
     )
     return result.scalars().all()
+
+
+async def get_dashboard_stats(db: AsyncSession) -> DashboardStats:
+    backup_stats = await get_backup_stats(db)
+    latest_scan = await get_latest_scan_snapshot(db)
+
+    return DashboardStats(
+        total_runs=backup_stats.total_runs,
+        success_rate=backup_stats.success_rate,
+        avg_duration_seconds=backup_stats.avg_duration_seconds,
+        last_run=backup_stats.last_run,
+        total_files=latest_scan.total_files if latest_scan else 0,
+        new_files=latest_scan.new_files if latest_scan else 0,
+        storage_total=latest_scan.storage_total if latest_scan else None,
+        last_scan_at=latest_scan.captured_at if latest_scan else None,
+    )
