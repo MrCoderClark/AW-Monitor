@@ -57,11 +57,11 @@ export function Sidebar() {
       </nav>
       <div className="px-2 mt-auto">
         <Link
-          href="/settings/profile"
+          href="/dashboard/profile"
           className="flex items-center gap-3 px-2 py-2 rounded text-sm text-neutral-400 hover:text-neutral-200 hover:bg-surface-2"
         >
           <span className="w-5 text-center shrink-0">{"⊕"}</span>
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Settings</span>
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Profile</span>
         </Link>
       </div>
     </aside>
