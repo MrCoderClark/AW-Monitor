@@ -140,6 +140,16 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface AuditLogListResponse {
+  logs: AuditLog[];
+  total: number;
+}
+
+export interface UserListResponse {
+  users: User[];
+  total: number;
+}
+
 export interface ConfigEntry {
   id: string;
   namespace: string;
