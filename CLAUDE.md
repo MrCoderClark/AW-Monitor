@@ -1,6 +1,6 @@
 # AW Monitor
 
-Operations monitoring dashboard for the AmericaWorks PDF backup pipeline. Tracks PC health, backup run results, and scan statistics across 24 lab PCs.
+Operations monitoring dashboard for the AmericaWorks PDF backup pipeline. Tracks PC health, backup run results, and scan statistics across 12 lab PCs.
 
 ## Project Structure
 
@@ -35,7 +35,10 @@ Monolith with modular codebase. Backend modules: `auth`, `users`, `audit`, `conf
 - Stores SMB credentials, health check intervals, Express API URL, webhook secrets
 
 ### Ingestion
-- Polls existing Express.js API (client-files-viewer) for scan stats
+- Queries client-files-viewer PostgreSQL directly (FileMetadata table) for scan stats and file listings
+- Config key `express_api.base_url` holds the connection string: `postgresql://postgres:r00tadmin@192.168.70.10:5432/clientfiles`
+- Polls on interval (default 30 min) to save scan snapshots
+- `/api/files` and `/api/files/dates` proxy live queries to the external DB
 - Receives webhook POSTs from PowerShell backup script for backup run events
 
 ### Frontend
@@ -74,25 +77,24 @@ Monolith with modular codebase. Backend modules: `auth`, `users`, `audit`, `conf
 | 08 | `08-config-store` | Task 8 | Fernet encryption, config CRUD, cache, defaults seeding |
 | 09 | `09-monitoring-probes` | Task 9 | 4-tier health probes, health check service |
 | 10 | `10-monitoring-scheduler` | Task 10 | Scheduler, WebSocket manager, monitoring router |
-| 11 | `11-ingestion` | Task 11 | Express poller, webhook receiver, backup tracking |
-| 12 | `12-frontend-scaffolding` | Task 12 | Next.js init, custom dark theme, types, API client |
-| 13 | `13-frontend-auth` | Task 13 | Zustand store, auth hook, login page |
-| 14 | `14-dashboard-layout` | Task 14 | Sidebar, topbar, status badges, dashboard shell |
-| 15 | `15-health-grid` | Task 15 | WebSocket hook, PC health grid, slide-over panel |
-| 16 | `16-backup-scans-pages` | Task 16 | Backup runs list/detail, scans history, trend charts |
-| 17 | `17-admin-pages` | Task 17 | Config editor, user management, audit log pages |
-| 18 | `18-profile-remaining` | Task 18 | Profile settings, PC management, root redirect |
+| 10 | `10-monitoring-ingestion` | Tasks 10-11 | Scheduler, WebSocket, Express poller, webhook, backup tracking |
+| 11 | `11-frontend-scaffolding-auth` | Tasks 12-13 | Next.js init, dark theme, types, API client, auth store, login |
+| 12 | `12-dashboard-health-grid` | Tasks 14-15 | Sidebar, topbar, dashboard shell, WebSocket health grid |
+| 13 | `13-backup-scans-pages` | Task 16 | Backup runs list/detail, scans page, file listings, trend charts |
+| 14 | `14-admin-pages` | Task 17 | Config editor, user management, audit log pages |
+| 15 | `15-profile-remaining` | Task 18 | Profile settings, PC management, root redirect |
 
 ## Related Projects
 
 - **client-files-viewer** (`D:\Code\aw\client-files-viewer`): The existing Express.js/Next.js app that scans PCs, indexes PDFs, and serves them. This app (aw-monitor) consumes its scan results.
-- **PowerShell script** (`Lab_Client_Assessments_Backupv2.ps1`): Runs daily, scans 24 PCs (PC1-PC24, 192.168.72.x subnet), copies PDFs to `\\192.168.70.10\Client_Assessments`.
+- **PowerShell script** (`D:\Code\aw\client-files-viewer\backend\scripts\Lab_Client_Assessments_Backupv2.ps1`): Runs daily, scans 24 PCs (PC1-PC24, 192.168.72.x subnet), copies PDFs to `\\192.168.70.10\Client_Assessments`.
 
 ## Network Context
 
-- 24 lab PCs: PC1 (192.168.72.37) through PC24 (192.168.72.100)
+- 12 lab PCs with DHCP IPs on 192.168.72.x subnet (see `backend/app/scripts/seed_pcs.py` for names and IPs)
 - File server: 192.168.70.10
 - Share path: `\\192.168.70.10\Client_Assessments`
 - SMB admin share user: `infotech`
-- Backend default port: 8000
+- Client-files-viewer DB: `postgresql://postgres:r00tadmin@192.168.70.10:5432/clientfiles`
+- Backend default port: 8000 (runs on 8001 — Supabase Kong occupies 8000)
 - Frontend default port: 3000

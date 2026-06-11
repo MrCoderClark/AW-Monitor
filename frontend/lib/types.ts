@@ -87,6 +87,29 @@ export interface ScanSnapshot {
   captured_at: string;
 }
 
+export interface BackupFile {
+  id: string;
+  filename: string;
+  folder_date: string;
+  file_path: string;
+  file_size: number;
+  assessment_type: string | null;
+  client_first_name: string | null;
+  client_last_name: string | null;
+  created_at: string | null;
+  modified_date: string | null;
+}
+
+export interface FileListResponse {
+  files: BackupFile[];
+  total: number;
+}
+
+export interface FolderDate {
+  folder_date: string;
+  file_count: number;
+}
+
 export interface AuditLog {
   id: string;
   user_id: string | null;
