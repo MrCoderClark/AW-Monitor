@@ -130,6 +130,14 @@ export interface DashboardStats {
   last_scan_at: string | null;
 }
 
+export interface Session {
+  id: string;
+  device_info: string | null;
+  ip_address: string | null;
+  expires_at: string;
+  created_at: string;
+}
+
 export interface AuditLog {
   id: string;
   user_id: string | null;

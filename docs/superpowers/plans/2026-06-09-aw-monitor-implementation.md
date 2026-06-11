@@ -96,7 +96,7 @@
 | `app/dashboard/config/page.tsx` | Config store management |
 | `app/dashboard/users/page.tsx` | User management |
 | `app/dashboard/audit-log/page.tsx` | Audit log viewer |
-| `app/settings/profile/page.tsx` | Profile, change password, sessions |
+| `app/dashboard/profile/page.tsx` | Profile, change password, sessions |
 | `components/ui/*` | shadcn base components (customized) |
 | `components/health-grid.tsx` | PC grid with status-grouped tiles |
 | `components/pc-tile.tsx` | Individual PC status tile |
@@ -4583,17 +4583,17 @@ git commit -m "feat: backup runs list/detail and scans history with trend charts
 
 These pages are ADMIN+ only. They follow the same design system. Config editor shows namespaced entries with masked secrets and a reveal button. User management is a table with role badges and action dropdowns. Audit log is a filterable log viewer.
 
-- [ ] **Step 1: Create `components/config-editor.tsx`** — groups config entries by namespace, shows masked values for secrets with a "Reveal" button that prompts for password re-entry via dialog, uses `PUT /api/config/:ns/:key` for updates.
+- [x] **Step 1: Create `components/config-editor.tsx`** — groups config entries by namespace, shows masked values for secrets with a "Reveal" button that prompts for password re-entry via dialog, uses `PUT /api/config/:ns/:key` for updates.
 
-- [ ] **Step 2: Create `app/dashboard/config/page.tsx`** — renders config-editor, fetches from `/api/config`, shows seed button for SUPER_ADMIN on first boot.
+- [x] **Step 2: Create `app/dashboard/config/page.tsx`** — renders config-editor, fetches from `/api/config`, shows seed button for SUPER_ADMIN on first boot.
 
-- [ ] **Step 3: Create `app/dashboard/users/page.tsx`** — user table with role badges, create user dialog, edit/delete actions via dropdown, role change for SUPER_ADMIN.
+- [x] **Step 3: Create `app/dashboard/users/page.tsx`** — user table with role badges, create user dialog, edit/delete actions via dropdown, role change for SUPER_ADMIN.
 
-- [ ] **Step 4: Create `app/dashboard/audit-log/page.tsx`** — paginated audit log table with action and user_id filters, timestamps in relative format.
+- [x] **Step 4: Create `app/dashboard/audit-log/page.tsx`** — paginated audit log table with action and user_id filters, timestamps in relative format.
 
-- [ ] **Step 5: Verify admin pages render and restrict by role**
+- [x] **Step 5: Verify admin pages render and restrict by role**
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .
@@ -4610,15 +4610,15 @@ git commit -m "feat: config editor, user management, and audit log pages (admin-
 - Create: `frontend/app/dashboard/pcs/[id]/page.tsx`
 - Create: `frontend/app/(home)/page.tsx`
 
-- [ ] **Step 1: Create `app/settings/profile/page.tsx`** — shows current user info, change password form (current + new + confirm), active sessions list with revoke buttons.
+- [x] **Step 1: Create `app/dashboard/profile/page.tsx`** — shows current user info, change password form (current + new + confirm), active sessions list with revoke buttons. (Moved from `app/settings/profile/` to `app/dashboard/profile/` to keep within dashboard layout.)
 
-- [ ] **Step 2: Create `app/dashboard/pcs/page.tsx`** — PC list table with status badges, add PC button (ADMIN+), edit/delete actions, "Check Now" button per PC.
+- [x] **Step 2: Create `app/dashboard/pcs/page.tsx`** — PC list with status dots, add/edit/delete dialogs, summary stats (total, online, monitored).
 
-- [ ] **Step 3: Create `app/dashboard/pcs/[id]/page.tsx`** — single PC detail with full health check history timeline, tier breakdown, folder accessibility details.
+- [x] **Step 3: PC detail** — handled via enriched slide-over modal on dashboard health grid (branch 14), not a separate `[id]` route.
 
-- [ ] **Step 4: Create `app/(home)/page.tsx`** — redirect to `/dashboard` if authenticated, `/login` if not.
+- [x] **Step 4: Update `app/page.tsx`** — root redirect to `/dashboard`; auth guard in dashboard layout handles redirect to `/login` if not authenticated.
 
-- [ ] **Step 5: Verify all pages render end-to-end**
+- [x] **Step 5: Verify all pages render end-to-end**
 
 ```bash
 cd frontend && npm run dev
@@ -4626,7 +4626,7 @@ cd frontend && npm run dev
 
 Navigate through all pages. Verify role-based nav filtering, data loading, dark theme consistency.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .

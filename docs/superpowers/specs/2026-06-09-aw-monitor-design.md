@@ -459,7 +459,7 @@ POST   /api/config/seed                    (SUPER_ADMIN, populate defaults on fi
 /dashboard/config          — Config store management (ADMIN+)
 /dashboard/users           — User management (ADMIN+)
 /dashboard/audit-log       — Audit log viewer (ADMIN+)
-/settings/profile          — Own profile, change password, sessions
+/dashboard/profile         — Own profile, change password, sessions
 ```
 
 ### 7.2 Main Dashboard Layout
@@ -569,7 +569,7 @@ aw-monitor/
 │   │   │   ├── config/page.tsx
 │   │   │   ├── users/page.tsx
 │   │   │   └── audit-log/page.tsx
-│   │   ├── settings/profile/page.tsx
+│   │   ├── dashboard/profile/page.tsx
 │   │   └── layout.tsx
 │   ├── components/
 │   │   ├── ui/
