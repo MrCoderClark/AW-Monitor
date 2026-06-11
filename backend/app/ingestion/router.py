@@ -7,6 +7,7 @@ from app.auth.models import User
 from app.config_store.service import get_cached
 from app.core.database import get_db
 from app.dependencies import require_role
+from app.ingestion.file_query import list_files, list_folder_dates
 from app.ingestion.schemas import BackupRunCreate, BackupRunRead, BackupRunStats, ScanSnapshotRead
 from app.ingestion.service import (
     create_backup_run,
@@ -67,6 +68,29 @@ async def scan_history(
     _: User = Depends(require_role("USER")),
 ):
     return await list_scan_snapshots(db, skip, limit)
+
+
+@router.get("/api/files")
+async def get_files(
+    folder_date: str | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    _: User = Depends(require_role("USER")),
+):
+    try:
+        return await list_files(folder_date, limit, skip)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+
+@router.get("/api/files/dates")
+async def get_file_dates(
+    _: User = Depends(require_role("USER")),
+):
+    try:
+        return await list_folder_dates()
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
 
 
 @router.post("/api/webhooks/backup-run", response_model=BackupRunRead, status_code=status.HTTP_201_CREATED)
