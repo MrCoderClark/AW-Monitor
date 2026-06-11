@@ -8,8 +8,8 @@ from app.auth.models import User
 from app.core.database import get_db
 from app.dependencies import require_role
 from app.monitoring.models import HealthCheck, PC
-from app.monitoring.schemas import HealthCheckRead, PCCreate, PCHealthSnapshot, PCRead, PCUpdate
-from app.monitoring.service import check_pc_health, get_all_pcs, get_latest_snapshot, get_pc_health_history
+from app.monitoring.schemas import HealthCheckRead, PCCreate, PCDetailStats, PCHealthSnapshot, PCRead, PCUpdate
+from app.monitoring.service import check_pc_health, get_all_pcs, get_latest_snapshot, get_pc_detail_stats, get_pc_health_history
 from app.monitoring.websocket import health_manager
 
 router = APIRouter(prefix="/api/pcs", tags=["monitoring"])
@@ -61,6 +61,38 @@ async def get_pc(
     if pc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PC not found")
     return pc
+
+
+@router.get("/{pc_id}/detail", response_model=PCDetailStats)
+async def get_pc_detail(
+    pc_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role("USER")),
+):
+    result = await db.execute(select(PC).where(PC.id == pc_id))
+    pc = result.scalar_one_or_none()
+    if pc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PC not found")
+
+    stats = await get_pc_detail_stats(db, pc)
+    latest = await db.execute(
+        select(HealthCheck).where(HealthCheck.pc_id == pc.id).order_by(HealthCheck.checked_at.desc()).limit(1)
+    )
+    check = latest.scalar_one_or_none()
+
+    pc_read = PCRead.model_validate(pc)
+    if check:
+        pc_read.latest_status = check.status
+        pc_read.latest_ping_ms = check.ping_ms
+
+    return PCDetailStats(
+        pc=pc_read,
+        latest_check=HealthCheckRead.model_validate(stats["latest_check"]) if stats["latest_check"] else None,
+        uptime_pct=stats["uptime_pct"],
+        checks_24h=stats["checks_24h"],
+        online_24h=stats["online_24h"],
+        recent_backup_failures=stats["recent_backup_failures"],
+    )
 
 
 @router.put("/{pc_id}", response_model=PCRead)

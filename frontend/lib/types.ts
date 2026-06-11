@@ -55,6 +55,15 @@ export interface PCHealthSnapshot {
   checked_at: string | null;
 }
 
+export interface PCDetailStats {
+  pc: PC;
+  latest_check: HealthCheck | null;
+  uptime_pct: number;
+  checks_24h: number;
+  online_24h: number;
+  recent_backup_failures: string[];
+}
+
 export interface BackupRun {
   id: string;
   files_copied: number;
@@ -108,6 +117,17 @@ export interface FileListResponse {
 export interface FolderDate {
   folder_date: string;
   file_count: number;
+}
+
+export interface DashboardStats {
+  total_runs: number;
+  success_rate: number;
+  avg_duration_seconds: number;
+  last_run: BackupRun | null;
+  total_files: number;
+  new_files: number;
+  storage_total: string | null;
+  last_scan_at: string | null;
 }
 
 export interface AuditLog {

@@ -28,6 +28,7 @@ Monolith with modular codebase. Backend modules: `auth`, `users`, `audit`, `conf
 - 4-tier checks: ICMP ping → SMB port 445 → admin share auth (smbprotocol) → folder access listing
 - 5 statuses: ONLINE, OFFLINE, SMB_BLOCKED, AUTH_FAILED, DEGRADED
 - WebSocket for real-time status push (only broadcasts on status changes)
+- `/api/pcs/{id}/detail` returns uptime stats, tier diagnostics, shared folders, backup failure history
 
 ### Config Store
 - AES-256 Fernet encrypted key-value store in DB
@@ -39,12 +40,16 @@ Monolith with modular codebase. Backend modules: `auth`, `users`, `audit`, `conf
 - Config key `express_api.base_url` holds the connection string: `postgresql://postgres:r00tadmin@192.168.70.10:5432/clientfiles`
 - Polls on interval (default 30 min) to save scan snapshots
 - `/api/files` and `/api/files/dates` proxy live queries to the external DB
+- `/api/files/{file_id}/download` streams PDF from UNC path (token via query param for browser viewing)
+- `/api/dashboard/stats` combined endpoint returns both scan + backup stats
 - Receives webhook POSTs from PowerShell backup script for backup run events
 
 ### Frontend
 - Dark-first operations theme — NOT generic AI-generated UI
 - Custom color palette, distinctive design identity
 - REST polling (30s via TanStack Query) for scan data, WebSocket for PC health
+- Scans page: paginated file list (50/page), per-file View PDF / Download dropdown
+- Dashboard: combined Quick Stats (scan + backup data), enriched PC detail slide-over
 
 ## Git Workflow
 
@@ -81,8 +86,9 @@ Monolith with modular codebase. Backend modules: `auth`, `users`, `audit`, `conf
 | 11 | `11-frontend-scaffolding-auth` | Tasks 12-13 | Next.js init, dark theme, types, API client, auth store, login |
 | 12 | `12-dashboard-health-grid` | Tasks 14-15 | Sidebar, topbar, dashboard shell, WebSocket health grid |
 | 13 | `13-backup-scans-pages` | Task 16 | Backup runs list/detail, scans page, file listings, trend charts |
-| 14 | `14-admin-pages` | Task 17 | Config editor, user management, audit log pages |
-| 15 | `15-profile-remaining` | Task 18 | Profile settings, PC management, root redirect |
+| 14 | `14-dashboard-scans-enhancements` | — | Scans pagination, PDF download, dashboard stats fix, PC detail modal |
+| 15 | `15-admin-pages` | Task 17 | Config editor, user management, audit log pages |
+| 16 | `16-profile-remaining` | Task 18 | Profile settings, PC management, root redirect |
 
 ## Related Projects
 

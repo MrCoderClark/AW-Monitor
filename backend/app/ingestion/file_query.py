@@ -6,6 +6,14 @@ from app.config_store.service import get_cached
 
 logger = logging.getLogger(__name__)
 
+FILE_BY_ID_QUERY = """
+    SELECT id, filename, "folderDate", "filePath", "fileSize",
+           "assessmentType", "clientFirstName", "clientLastName",
+           "createdAt", "modifiedDate"
+    FROM "FileMetadata"
+    WHERE id = $1
+"""
+
 FILES_QUERY = """
     SELECT
         id, filename, "folderDate", "filePath", "fileSize",
@@ -61,6 +69,24 @@ async def list_files(folder_date: str | None = None, limit: int = 50, offset: in
             for r in rows
         ]
         return {"files": files, "total": total}
+    finally:
+        await conn.close()
+
+
+async def get_file_by_id(file_id: int) -> dict | None:
+    conn = await _get_conn()
+    try:
+        row = await conn.fetchrow(FILE_BY_ID_QUERY, file_id)
+        if not row:
+            return None
+        return {
+            "id": str(row["id"]),
+            "filename": row["filename"],
+            "folder_date": row["folderDate"],
+            "file_path": row["filePath"],
+            "file_size": int(row["fileSize"]),
+            "assessment_type": row["assessmentType"],
+        }
     finally:
         await conn.close()
 
